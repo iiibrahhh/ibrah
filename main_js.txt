@@ -1,0 +1,107 @@
+ let sortOrder = {
+    symbol: 'asc',
+    price: 'asc',
+    rsi: 'asc',
+    ema: 'asc',
+    macd: 'asc'
+};
+
+async function fetchCryptoData() {
+    try {
+        const response = await fetch('/update_data');
+        if (!response.ok) {
+            throw new Error(HTTP error! status: ${response.status});
+        }
+        const data = await response.json();
+        return data;
+    } catch (error) {
+        console.error('Error fetching crypto data:', error);
+        return null;
+    }
+}
+
+async function updateData() {
+    const data = await fetchCryptoData();
+    if (data && data.data) {
+        updateTable(data.data);
+    } else {
+        console.error('No data received or data is not in expected format');
+    }
+}
+
+function updateTable(data) {
+    const tableBody = document.getElementById('crypto-table-body');
+    tableBody.innerHTML = '';  // Clear existing data
+    data.forEach(item => {
+        const row = document.createElement('tr');
+        
+        // Create table cells
+        const rankCell = document.createElement('td');
+        rankCell.textContent = item.rank || 'N/A';
+        const symbolCell = document.createElement('td');
+        symbolCell.innerHTML = ${item.symbol} <span class="favorite-star">&#9733;</span> <span class="watchlist-plus">+</span>;
+        const priceCell = document.createElement('td');
+        priceCell.textContent = (item.price || 'N/A').toFixed(9); // Format to 9 decimal places
+        priceCell.className = 'number-format';
+        const rsiCell = document.createElement('td');
+        rsiCell.innerHTML = ${(item.rsi || 'N/A').toFixed(9)} <span class="${item.rsi_recommendation === 'Buy' ? 'buy' : 'sell'}">${item.rsi_recommendation}</span>;
+        rsiCell.className = 'number-format';
+        const emaCell = document.createElement('td');
+        emaCell.innerHTML = ${(item.ema || 'N/A').toFixed(9)} <span class="${item.ema_recommendation === 'Buy' ? 'buy' : 'sell'}">${item.ema_recommendation}</span>;
+        emaCell.className = 'number-format';
+        const macdCell = document.createElement('td');
+        macdCell.innerHTML = ${(item.macd || 'N/A').toFixed(9)} <span class="${item.macd_recommendation === 'Buy' ? 'buy' : 'sell'}">${item.macd_recommendation}</span>;
+        macdCell.className = 'number-format';
+        
+        // Append cells to row
+        row.appendChild(rankCell);
+        row.appendChild(symbolCell);
+        row.appendChild(priceCell);
+        row.appendChild(rsiCell);
+        row.appendChild(emaCell);
+        row.appendChild(macdCell);
+        
+        // Append row to table body
+        tableBody.appendChild(row);
+    });
+}
+
+function sortTable(column, order) {
+    const tableBody = document.getElementById('crypto-table-body');
+    const rows = Array.from(tableBody.querySelectorAll('tr'));
+    const compare = (a, b) => {
+        const aText = a.querySelector(td:nth-child(${column})).textContent.trim();
+        const bText = b.querySelector(td:nth-child(${column})).textContent.trim();
+        if (column === 3 || column === 4 || column === 5 || column === 6) { // Price, RSI, EMA, MACD
+            return (parseFloat(aText) - parseFloat(bText)) * (order === 'asc' ? 1 : -1);
+        } else { // Symbol
+            return aText.localeCompare(bText) * (order === 'asc' ? 1 : -1);
+        }
+    };
+    rows.sort(compare);
+    rows.forEach(row => tableBody.appendChild(row));
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    updateData();
+    updateDateTime();
+    
+    document.querySelectorAll('.sort-icons').forEach(icon => {
+        icon.addEventListener('click', event => {
+            const sortBy = event.target.getAttribute('data-sort');
+            const [column, order] = sortBy.split('-');
+            const columnIndex = { 'symbol': 2, 'price': 3, 'rsi': 4, 'ema': 5, 'macd': 6 }[column];
+            
+            // Toggle sort order if the same column is clicked
+            sortOrder[column] = (sortOrder[column] === 'asc' ? 'desc' : 'asc');
+            
+            sortTable(columnIndex, sortOrder[column]);
+        });
+    });
+});
+
+// Update date and time every second
+setInterval(updateDateTime, 1000);
+
+// Update data every 5 seconds
+setInterval(updateData, 5000);

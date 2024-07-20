@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Crypto Dashboard</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <div id="top-section">
+        <div id="datetime"></div>
+        <button id="metamask-connect">Connect to MetaMask</button>
+    </div>
+    <div id="controls">
+        <select id="interval-select">
+            <option value="15m">15 Minutes</option>
+            <option value="1h">1 Hour</option>
+            <option value="1d">1 Day</option>
+            <!-- Add other intervals as needed -->
+        </select>
+        <input type="text" id="crypto-search" placeholder="Search for a cryptocurrency">
+    </div>
+    <div id="table-section">
+        <table id="crypto-table">
+            <thead>
+                <tr>
+                    <th>Symbol</th>
+                    <th>Price</th>
+                    <th>RSI</th>
+                    <th>MACD</th>
+                    <th>SMA</th>
+                    <th>EMA</th>
+                    <th>ADX</th>
+                    <th>CCI</th>
+                    <th>OBV</th>
+                    <th>BBand_Mavg</th>
+                    <th>BBand_Hband</th>
+                    <th>BBand_Lband</th>
+                    <th>ATR</th>
+                    <th>FI</th>
+                </tr>
+            </thead>
+            <tbody id="crypto-table-body">
+                <!-- Data will be inserted here dynamically -->
+            </tbody>
+        </table>
+    </div>
+    <script src="/static/script.js"></script>
+</body>
+</html>

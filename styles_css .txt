@@ -1,0 +1,71 @@
+ body {
+    font-family: Arial, sans-serif;
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+#top-section {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px;
+    background-color: #333;
+    color: #fff;
+}
+
+#controls {
+    display: flex;
+    justify-content: space-between;
+    padding: 10px;
+    background-color: #f4f4f4;
+}
+
+#table-section {
+    padding: 10px;
+}
+
+#crypto-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+#crypto-table th, #crypto-table td {
+    border: 1px solid #ddd;
+    padding: 8px;
+    text-align: right; /* Align numbers to the right */
+}
+
+#crypto-table th {
+    background-color: #f4f4f4;
+}
+
+/* Adjust column header styles for MACD */
+#crypto-table th:nth-child(6) {
+    text-align: center;
+}
+
+/* Styles for favorite star and watchlist plus icons */
+.favorite-star, .watchlist-plus {
+    cursor: pointer;
+    margin-left: 5px;
+}
+
+/* Styles for recommendations */
+.buy {
+    color: green;
+}
+
+.sell {
+    color: red;
+}
+
+/* Ensure MACD column is also styled */
+#crypto-table td.macd {
+    text-align: right;
+}
+
+/* Optional: Add some padding or margin to cells with recommendations */
+#crypto-table td span {
+    margin-left: 5px;
+}

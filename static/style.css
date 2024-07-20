@@ -1,0 +1,59 @@
+body {
+    font-family: Arial, sans-serif;
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+#top-section {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px;
+    background-color: #333;
+    color: #fff;
+}
+
+#controls {
+    display: flex;
+    justify-content: space-between;
+    padding: 10px;
+    background-color: #f4f4f4;
+}
+
+#table-section {
+    padding: 10px;
+}
+
+#crypto-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+#crypto-table th, #crypto-table td {
+    border: 1px solid #ddd;
+    padding: 8px;
+    text-align: right;
+}
+
+#crypto-table th {
+    background-color: #f4f4f4;
+}
+
+.sort-icon {
+    cursor: pointer;
+    margin-left: 5px;
+}
+
+.favorite-star, .watchlist-plus {
+    cursor: pointer;
+    margin-left: 5px;
+}
+
+.buy {
+    color: green;
+}
+
+.sell {
+    color: red;
+}

@@ -1,0 +1,99 @@
+ import Flask, jsonify, render_template
+import requests
+import ccxt
+import pandas as pd
+import ta
+from datetime import datetime, timedelta
+
+app = Flask(__name__)
+
+API_KEY = '5e54e977-66f6-43ac-8d1d-9b25e3a1f78f'
+BASE_URL = 'https://pro-api.coinmarketcap.com/v1/cryptocurrency/listings/latest'
+
+exchange = ccxt.binance()
+cache = {'last_updated': datetime.utcnow(), 'data': []}
+
+def get_historical_data(symbol, timeframe):
+    since = exchange.parse8601('2023-01-01T00:00:00Z')
+    ohlcv = exchange.fetch_ohlcv(symbol, timeframe, since)
+    df = pd.DataFrame(ohlcv, columns=['timestamp', 'open', 'high', 'low', 'close', 'volume'])
+    df['timestamp'] = pd.to_datetime(df['timestamp'], unit='ms')
+    df.set_index('timestamp', inplace=True)
+    return df
+
+def calculate_rsi(data, period=14):
+    data['rsi'] = ta.momentum.rsi(data['close'], window=period)
+    return data
+
+def calculate_ema(data, period=14):
+    data['ema'] = ta.trend.ema_indicator(data['close'], window=period)
+    return data
+
+def calculate_macd(data, fast_period=12, slow_period=26, signal_period=9):
+    macd = ta.trend.macd(data['close'], window_slow=slow_period, window_fast=fast_period)
+    macd_signal = ta.trend.macd_signal(data['close'], window_slow=slow_period, window_fast=fast_period, window_sign=signal_period)
+    data['macd'] = macd
+    data['macd_signal'] = macd_signal
+    return data
+
+def update_cache():
+    headers = {'X-CMC_PRO_API_KEY': API_KEY}
+    params = {
+        'start': '1',
+        'limit': '10',
+        'sort': 'market_cap',
+        'convert': 'USDT'
+    }
+    response = requests.get(BASE_URL, headers=headers, params=params)
+    if response.status_code != 200:
+        raise Exception('Failed to fetch data from CoinMarketCap')
+    
+    data = response.json().get('data', [])
+    crypto_data = []
+    
+    for coin in data:
+        symbol = coin['symbol'] + 'USDT'
+        try:
+            historical_data = get_historical_data(symbol, '1h')  # Adjust the timeframe as needed
+            historical_data = calculate_rsi(historical_data)
+            historical_data = calculate_ema(historical_data)
+            historical_data = calculate_macd(historical_data)
+            last_row = historical_data.iloc[-1]
+            
+            crypto_info = {
+                'rank': coin['cmc_rank'],
+                'symbol': coin['symbol'],
+                'price': coin['quote']['USDT']['price'],
+                'rsi': last_row['rsi'],
+                'rsi_recommendation': 'Buy' if last_row['rsi'] < 30 else 'Sell' if last_row['rsi'] > 70 else 'Hold',
+                'ema': last_row['ema'],
+                'ema_recommendation': 'Buy' if last_row['close'] > last_row['ema'] else 'Sell',
+                'macd': last_row['macd'],
+                'macd_signal': last_row['macd_signal'],
+                'macd_recommendation': 'Buy' if last_row['macd'] > last_row['macd_signal'] else 'Sell'
+            }
+            crypto_data.append(crypto_info)
+        except Exception as e:
+            print(f"Error processing {symbol}: {str(e)}")
+            continue
+    
+    cache['data'] = crypto_data
+    cache['last_updated'] = datetime.utcnow()
+
+@app.route('/')
+def index():
+    return render_template('index.html')
+
+@app.route('/update_data', methods=['GET'])
+def update_data():
+    now = datetime.utcnow()
+    if not cache['data'] or (now - cache['last_updated'] > timedelta(seconds=10)):
+        try:
+            update_cache()
+        except Exception as e:
+            return jsonify({'error': str(e)}), 500
+    
+    return jsonify({'data': cache['data']})
+
+if __name__ == '__main__':
+    app.run(debug=True)

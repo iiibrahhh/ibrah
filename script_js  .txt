@@ -1,0 +1,139 @@
+let sortDirection = 'asc'; // Default sorting direction
+let currentSortBy = 'price'; // Default sort column
+
+async function fetchCryptoData(sortBy = 'price', direction = 'asc') {
+    try {
+        const response = await fetch('/update_data');
+        if (!response.ok) {
+            throw new Error(HTTP error! status: ${response.status});
+        }
+        const data = await response.json();
+        if (data && data.data) {
+            return sortData(data.data, sortBy, direction);
+        } else {
+            console.error('No data received or data is not in expected format');
+            return [];
+        }
+    } catch (error) {
+        console.error('Error fetching crypto data:', error);
+        return [];
+    }
+}
+
+function sortData(data, sortBy, direction) {
+    return data.sort((a, b) => {
+        if (direction === 'asc') {
+            return a[sortBy] - b[sortBy];
+        } else {
+            return b[sortBy] - a[sortBy];
+        }
+    });
+}
+
+async function updateData(sortBy = 'price', direction = 'asc') {
+    const data = await fetchCryptoData(sortBy, direction);
+    if (data.length > 0) {
+        updateTable(data);
+    } else {
+        console.error('No data to update');
+    }
+}
+
+function updateTable(data) {
+    const tableBody = document.getElementById('crypto-table-body');
+    tableBody.innerHTML = '';  // Clear existing data
+    data.forEach(item => {
+        const row = document.createElement('tr');
+        
+        // Create table cells
+        const rankCell = document.createElement('td');
+        rankCell.textContent = item.rank || 'N/A';
+        const symbolCell = document.createElement('td');
+        symbolCell.innerHTML = ${item.symbol || 'N/A'} <span class="favorite-star">&#9733;</span> <span class="watchlist-plus">+</span>;
+        const priceCell = document.createElement('td');
+        priceCell.textContent = (item.price || 'N/A').toFixed(9); // Format to 9 decimal places
+        const rsiCell = document.createElement('td');
+        rsiCell.innerHTML = ${(item.rsi || 'N/A').toFixed(9)} <span class="${item.rsi_recommendation === 'Buy' ? 'buy' : 'sell'}">${item.rsi_recommendation}</span>;
+        const emaCell = document.createElement('td');
+        emaCell.innerHTML = ${(item.ema || 'N/A').toFixed(9)} <span class="${item.ema_recommendation === 'Buy' ? 'buy' : 'sell'}">${item.ema_recommendation}</span>;
+        const macdCell = document.createElement('td');
+        macdCell.innerHTML = ${(item.macd || 'N/A').toFixed(9)} <span class="${item.macd_recommendation === 'Buy' ? 'buy' : 'sell'}">${item.macd_recommendation}</span>;
+        
+        // Append cells to row
+        row.appendChild(rankCell);
+        row.appendChild(symbolCell);
+        row.appendChild(priceCell);
+        row.appendChild(rsiCell);
+        row.appendChild(emaCell);
+        row.appendChild(macdCell);
+        
+        // Append row to table body
+        tableBody.appendChild(row);
+    });
+}
+
+document.addEventListener('DOMContentLoaded', async () => {
+    await updateData('price', 'asc'); // Fetch and display data immediately on page load
+    updateDateTime();
+    
+    // Add event listeners for sorting icons
+    document.getElementById('rank-sort').addEventListener('click', () => {
+        currentSortBy = 'rank';
+        sortDirection = sortDirection === 'asc' ? 'desc' : 'asc';
+        document.getElementById('rank-sort').textContent = sortDirection === 'asc' ? '▲' : '▼';
+        updateData(currentSortBy, sortDirection);
+    });
+
+    document.getElementById('price-sort').addEventListener('click', () => {
+        currentSortBy = 'price';
+        sortDirection = sortDirection === 'asc' ? 'desc' : 'asc';
+        document.getElementById('price-sort').textContent = sortDirection === 'asc' ? '▲' : '▼';
+        updateData(currentSortBy, sortDirection);
+    });
+
+    document.getElementById('rsi-sort').addEventListener('click', () => {
+        currentSortBy = 'rsi';
+        sortDirection = sortDirection === 'asc' ? 'desc' : 'asc';
+        document.getElementById('rsi-sort').textContent = sortDirection === 'asc' ? '▲' : '▼';
+        updateData(currentSortBy, sortDirection);
+    });
+
+    document.getElementById('ema-sort').addEventListener('click', () => {
+        currentSortBy = 'ema';
+        sortDirection = sortDirection === 'asc' ? 'desc' : 'asc';
+        document.getElementById('ema-sort').textContent = sortDirection === 'asc' ? '▲' : '▼';
+        updateData(currentSortBy, sortDirection);
+    });
+    
+    // Add event listeners for MACD sorting
+    document.getElementById('macd-sort').addEventListener('click', () => {
+        currentSortBy = 'macd';
+        sortDirection = sortDirection === 'asc' ? 'desc' : 'asc';
+        document.getElementById('macd-sort').textContent = sortDirection === 'asc' ? '▲' : '▼';
+        updateData(currentSortBy, sortDirection);
+    });
+
+    // Add event listeners for favorite and watchlist buttons
+    document.getElementById('crypto-table-body').addEventListener('click', event => {
+        if (event.target.classList.contains('favorite-star')) {
+            console.log('Add to favorites');
+            // Add your logic for adding to favorites
+        }
+        if (event.target.classList.contains('watchlist-plus')) {
+            console.log('Add to watchlist');
+            // Add your logic for adding to watchlist
+        }
+    });
+});
+
+// Update date and time every second
+setInterval(updateDateTime, 1000);
+
+// Update data every 10 seconds
+setInterval(() => updateData(currentSortBy, sortDirection), 10000);
+
+function updateDateTime() {
+    const datetimeElement = document.getElementById('datetime');
+    const now = new Date();
+    datetimeElement.textContent = now.toLocaleString();
+}

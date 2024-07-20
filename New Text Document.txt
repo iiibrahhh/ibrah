@@ -1,0 +1,7 @@
+---------------------------
+ODBC Installer Error
+---------------------------
+The ODBC installer DLL (ODBCCP32.DLL) is not installed on this system.
+---------------------------
+OK   
+---------------------------

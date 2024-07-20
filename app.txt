@@ -1,0 +1,209 @@
+from flask import Flask, jsonify, render_template
+import requests
+import ccxt
+import pandas as pd
+import ta
+from datetime import datetime, timedelta
+
+app = Flask(__name__)
+
+API_KEY = '5e54e977-66f6-43ac-8d1d-9b25e3a1f78f'
+BASE_URL = 'https://pro-api.coinmarketcap.com/v1/cryptocurrency/listings/latest'
+
+exchange = ccxt.binance()
+cache = {'last_updated': datetime.utcnow(), 'data': []}
+
+def get_historical_data(symbol, timeframe):
+    since = exchange.parse8601('2023-01-01T00:00:00Z')
+    ohlcv = exchange.fetch_ohlcv(symbol, timeframe, since)
+    df = pd.DataFrame(ohlcv, columns=['timestamp', 'open', 'high', 'low', 'close', 'volume'])
+    df['timestamp'] = pd.to_datetime(df['timestamp'], unit='ms')
+    df.set_index('timestamp', inplace=True)
+    return df
+
+def calculate_rsi(data, period=14):
+    data['rsi'] = ta.momentum.rsi(data['close'], window=period)
+    return data
+
+def calculate_ema(data, period=14):
+    data['ema'] = ta.trend.ema_indicator(data['close'], window=period)
+    return data
+
+def calculate_macd(data, fast_period=12, slow_period=26, signal_period=9):
+    macd = ta.trend.macd(data['close'], window_slow=slow_period, window_fast=fast_period)
+    macd_signal = ta.trend.macd_signal(data['close'], window_slow=slow_period, window_fast=fast_period, window_sign=signal_period)
+    data['macd'] = macd
+    data['macd_signal'] = macd_signal
+    return data
+
+def update_cache():
+    headers = {'X-CMC_PRO_API_KEY': API_KEY}
+    params = {
+        'start': '1',
+        'limit': '10',
+        'sort': 'market_cap',
+        'convert': 'USDT'
+    }
+    response = requests.get(BASE_URL, headers=headers, params=params)
+    if response.status_code != 200:
+        raise Exception('Failed to fetch data from CoinMarketCap')
+    
+    data = response.json().get('data', [])
+    crypto_data = []
+    
+    for coin in data:
+        symbol = coin['symbol'] + 'USDT'
+        try:
+            historical_data = get_historical_data(symbol, '1h')  # Adjust the timeframe as needed
+            historical_data = calculate_rsi(historical_data)
+            historical_data = calculate_ema(historical_data)
+            historical_data = calculate_macd(historical_data)
+            last_row = historical_data.iloc[-1]
+            
+            crypto_info = {
+                'rank': coin['cmc_rank'],
+                'symbol': coin['symbol'],
+                'price': coin['quote']['USDT']['price'],
+                'rsi': last_row['rsi'],
+                'rsi_recommendation': 'Buy' if last_row['rsi'] < 30 else 'Sell' if last_row['rsi'] > 70 else 'Hold',
+                'ema': last_row['ema'],
+                'ema_recommendation': 'Buy' if last_row['close'] > last_row['ema'] else 'Sell',
+                'macd': last_row['macd'],
+                'macd_signal': last_row['macd_signal'],
+                'macd_recommendation': 'Buy' if last_row['macd'] > last_row['macd_signal'] else 'Sell'
+            }
+            crypto_data.append(crypto_info)
+        except Exception as e:
+            print(f"Error processing {symbol}: {str(e)}")
+            continue
+    
+    cache['data'] = crypto_data
+    cache['last_updated'] = datetime.utcnow()
+
+@app.route('/')
+def index():
+    return render_template('index.html')
+
+@app.route('/update_data', methods=['GET'])
+def update_data():
+    now = datetime.utcnow()
+    if not cache['data'] or (now - cache['last_updated'] > timedelta(seconds=10)):
+        try:
+            update_cache()
+        except Exception as e:
+            return jsonify({'error': str(e)}), 500
+    
+    return jsonify({'data': cache['data']})
+
+if __name__ == '__main__':
+    app.run(debug=True)
+ChatGPT
+Got it! If you need any changes or help with this file, just let me know.
+
+هاذا ملف ال main.js let sortOrder = {
+    symbol: 'asc',
+    price: 'asc',
+    rsi: 'asc',
+    ema: 'asc',
+    macd: 'asc'
+};
+
+async function fetchCryptoData() {
+    try {
+        const response = await fetch('/update_data');
+        if (!response.ok) {
+            throw new Error(HTTP error! status: ${response.status});
+        }
+        const data = await response.json();
+        return data;
+    } catch (error) {
+        console.error('Error fetching crypto data:', error);
+        return null;
+    }
+}
+
+async function updateData() {
+    const data = await fetchCryptoData();
+    if (data && data.data) {
+        updateTable(data.data);
+    } else {
+        console.error('No data received or data is not in expected format');
+    }
+}
+
+function updateTable(data) {
+    const tableBody = document.getElementById('crypto-table-body');
+    tableBody.innerHTML = '';  // Clear existing data
+    data.forEach(item => {
+        const row = document.createElement('tr');
+        
+        // Create table cells
+        const rankCell = document.createElement('td');
+        rankCell.textContent = item.rank || 'N/A';
+        const symbolCell = document.createElement('td');
+        symbolCell.innerHTML = ${item.symbol} <span class="favorite-star">&#9733;</span> <span class="watchlist-plus">+</span>;
+        const priceCell = document.createElement('td');
+        priceCell.textContent = (item.price || 'N/A').toFixed(9); // Format to 9 decimal places
+        priceCell.className = 'number-format';
+        const rsiCell = document.createElement('td');
+        rsiCell.innerHTML = ${(item.rsi || 'N/A').toFixed(9)} <span class="${item.rsi_recommendation === 'Buy' ? 'buy' : 'sell'}">${item.rsi_recommendation}</span>;
+        rsiCell.className = 'number-format';
+        const emaCell = document.createElement('td');
+        emaCell.innerHTML = ${(item.ema || 'N/A').toFixed(9)} <span class="${item.ema_recommendation === 'Buy' ? 'buy' : 'sell'}">${item.ema_recommendation}</span>;
+        emaCell.className = 'number-format';
+        const macdCell = document.createElement('td');
+        macdCell.innerHTML = ${(item.macd || 'N/A').toFixed(9)} <span class="${item.macd_recommendation === 'Buy' ? 'buy' : 'sell'}">${item.macd_recommendation}</span>;
+        macdCell.className = 'number-format';
+        
+        // Append cells to row
+        row.appendChild(rankCell);
+        row.appendChild(symbolCell);
+        row.appendChild(priceCell);
+        row.appendChild(rsiCell);
+        row.appendChild(emaCell);
+        row.appendChild(macdCell);
+        
+        // Append row to table body
+        tableBody.appendChild(row);
+    });
+}
+
+function sortTable(column, order) {
+    const tableBody = document.getElementById('crypto-table-body');
+    const rows = Array.from(tableBody.querySelectorAll('tr'));
+    const compare = (a, b) => {
+        const aText = a.querySelector(td:nth-child(${column})).textContent.trim();
+        const bText = b.querySelector(td:nth-child(${column})).textContent.trim();
+        if (column === 3 || column === 4 || column === 5 || column === 6) { // Price, RSI, EMA, MACD
+            return (parseFloat(aText) - parseFloat(bText)) * (order === 'asc' ? 1 : -1);
+        } else { // Symbol
+            return aText.localeCompare(bText) * (order === 'asc' ? 1 : -1);
+        }
+    };
+    rows.sort(compare);
+    rows.forEach(row => tableBody.appendChild(row));
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    updateData();
+    updateDateTime();
+    
+    document.querySelectorAll('.sort-icons').forEach(icon => {
+        icon.addEventListener('click', event => {
+            const sortBy = event.target.getAttribute('data-sort');
+            const [column, order] = sortBy.split('-');
+            const columnIndex = { 'symbol': 2, 'price': 3, 'rsi': 4, 'ema': 5, 'macd': 6 }[column];
+            
+            // Toggle sort order if the same column is clicked
+            sortOrder[column] = (sortOrder[column] === 'asc' ? 'desc' : 'asc');
+            
+            sortTable(columnIndex, sortOrder[column]);
+        });
+    });
+});
+
+// Update date and time every second
+setInterval(updateDateTime, 1000);
+
+// Update data every 5 seconds
+setInterval(updateData, 5000);
